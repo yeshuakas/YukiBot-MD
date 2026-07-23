@@ -2,10 +2,8 @@ import { watchFile, unwatchFile } from "fs";
 import chalk from "chalk";
 import { fileURLToPath } from "url";
 
-global.owner = ['573196588149', '50498273976'];
 global.owner = ['524428178176', '524428178176'];
 
-global.dev = "© ⍴᥆ᥕᥱrᥱძ ᑲᥡ ⁱᵃᵐ|𝔇ĕ𝐬†𝓻⊙γ𒆜";
 global.dev = "© Creado por Yeshua";
 global.links = {
   api: 'https://api.yuki-wabot.my.id',
