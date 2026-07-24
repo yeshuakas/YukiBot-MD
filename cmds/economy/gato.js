@@ -3,7 +3,7 @@ import db from '#db';
 let handler = async ({ msg, sock, args, usedPrefix }) => {
   const chatId = msg.chat;
 
-  // Inicialización de seguridad para la variable global en Yuki
+  // Inicialización de seguridad para la variable global
   if (!global.tictactoe) global.tictactoe = {};
 
   if (global.tictactoe[chatId]) {
@@ -64,7 +64,7 @@ let handler = async ({ msg, sock, args, usedPrefix }) => {
 };
 
 handler.help = ['gato @usuario'];
-handler.tags = ['game'];
-handler.command = /^(gato|ttt|tictactoe)$/i;
+handler.tags = ['economy']; // O 'game' según las subcarpetas de tu bot
+handler.command = ['gato', 'ttt', 'tictactoe']; // Formato en Array compatible con el loader
 
 export default handler;
