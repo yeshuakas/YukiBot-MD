@@ -1,5 +1,10 @@
+import db from '#db';
+
 let handler = async ({ msg, sock, args, usedPrefix }) => {
   const chatId = msg.chat;
+
+  // Inicialización de seguridad para la variable global en Yuki
+  if (!global.tictactoe) global.tictactoe = {};
 
   if (global.tictactoe[chatId]) {
     return sock.reply(chatId, '⚠️ Ya hay una partida activa o pendiente en este grupo.', msg);
@@ -60,6 +65,6 @@ let handler = async ({ msg, sock, args, usedPrefix }) => {
 
 handler.help = ['gato @usuario'];
 handler.tags = ['game'];
-handler.command = /^(gato|ttt|tictactoe)$/i; // En Yuki-Bot muchos handlers usan Expresiones Regulares para el comando
+handler.command = /^(gato|ttt|tictactoe)$/i;
 
 export default handler;
