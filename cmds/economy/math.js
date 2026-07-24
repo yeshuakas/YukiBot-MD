@@ -1,5 +1,6 @@
 import db from '#db';
 global.math = global.math || {};
+global.mathCooldown = global.mathCooldown || {}; // 👈 Usamos memoria RAM para evitar el error de SQL
 
 const limits = { facil: 10, medio: 50, dificil: 90, imposible: 100, imposible2: 500 };
 const rewardRanges = { 
@@ -62,14 +63,13 @@ export default {
     const texto = msg.text?.trim().toLowerCase() || '';
 
     // 🛑 1. DETECTOR Y BLOQUEO DE TRAMPAS (IA / ChatGPT)
-    const comandosIA = ['#chatgpt', '#ia', '#gpt', '#gemini', '#bot']; // Comandos bloqueados
+    const comandosIA = ['#chatgpt', '#ia', '#gpt', '#gemini', '#bot'];
     const intentoTrampa = comandosIA.some(cmd => texto.startsWith(cmd) || (usedPrefix && texto.startsWith(usedPrefix)));
 
     if (intentoTrampa && (texto.includes('chatgpt') || texto.includes('gpt') || texto.includes('ia'))) {
       const user = db.getChatUser(chatId, msg.sender);
       const nuevasWarns = (user.warns || 0) + 1;
 
-      // Registrar la advertencia en la base de datos
       db.setChatUser(chatId, msg.sender, 'warns', nuevasWarns);
 
       await sock.reply(
@@ -78,7 +78,7 @@ export default {
         msg, 
         { mentions: [msg.sender] }
       );
-      return true; // Cancela la ejecución del comando de IA
+      return true;
     }
 
     // 2. COMPROBACIÓN DE RESPUESTA DE MATEMÁTICAS
@@ -117,11 +117,13 @@ export default {
       return sock.reply(chatId, '「✎」Especifica una dificultad válida: *facil, medio, dificil, imposible, imposible2*', msg);
     }
 
-    // ⏳ VERIFICACIÓN DEL TIEMPO DE ESPERA (COOLDOWN)
-    const user = db.getChatUser(chatId, msg.sender);
+    // ⏳ VERIFICACIÓN DEL TIEMPO DE ESPERA (COOLDOWN EN MEMORIA)
+    const userKey = `${chatId}_${msg.sender}`;
+    global.mathCooldown[userKey] = global.mathCooldown[userKey] || {};
+
     const now = Date.now();
     const cooldownTiempo = COOLDOWNS[dificultad] || COOLDOWNS.default;
-    const ultimoUso = user?.mathCooldown?.[dificultad] || 0;
+    const ultimoUso = global.mathCooldown[userKey][dificultad] || 0;
 
     if (now - ultimoUso < cooldownTiempo) {
       const tiempoRestanteMs = cooldownTiempo - (now - ultimoUso);
@@ -135,10 +137,8 @@ export default {
       );
     }
 
-    // ✍️ Guardar el timestamp actual en la BD del usuario para esta dificultad
-    const mathCooldown = user?.mathCooldown || {};
-    mathCooldown[dificultad] = now;
-    db.setChatUser(chatId, msg.sender, 'mathCooldown', mathCooldown);
+    // ✍️ Guardar el timestamp actual en la memoria global
+    global.mathCooldown[userKey][dificultad] = now;
 
     const { problema, resultado } = generarProblema(dificultad);
     const problemMessage = await sock.reply(chatId, `「✩」*¡DESAFÍO GRUPAL DE MATEMÁTICAS!*\nTienen 1 minuto. El primero en responder correctamente gana:\n\n> ✩ *${problema}*\n\n_✐ Responde con el número correcto antes que los demás._`, msg);
