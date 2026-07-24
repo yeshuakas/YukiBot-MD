@@ -1,40 +1,83 @@
 import db from '#db';
+
 export default {
-  command: ['dep', 'deposit', 'd', 'depositar'],
+  command: ['gato', 'ttt', 'tictactoe'],
   category: 'economy',
-  description: 'Depositar tus coins en el banco.',
+  description: 'Desafiar a un usuario a una partida de gato/tres en raya apostando Yenes.',
   run: async ({ msg, sock, args, usedPrefix }) => {
-    const chatData = db.getChat(msg.chat);
+    const chatId = msg.chat;
+
+    // Verificar si la economía está activada en el grupo
+    const chatData = db.getChat(chatId);
     if (chatData.adminonly || !chatData.economy) {
       return msg.reply(`ꕥ Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`);
-    }    
+    }
+
+    // Inicializar global de partidas
+    if (!global.tictactoe) global.tictactoe = {};
+
+    if (global.tictactoe[chatId]) {
+      return msg.reply('⚠️ Ya hay una partida activa o pendiente en este grupo.');
+    }
+
+    const retado = msg.mentionedJid?.[0];
+    if (!retado) {
+      return msg.reply(`⚠️ Debes mencionar a un usuario.\n\n*Ejemplo:* \`${usedPrefix}gato @usuario 1000\``);
+    }
+
+    if (retado === msg.sender) {
+      return msg.reply('❌ No puedes jugar contra ti mismo.');
+    }
+
+    // Obtener la moneda configurada en el bot
     const idBot = sock.user.id.split(':')[0] + '@s.whatsapp.net';
     const settings = db.getSettings(idBot);
-    const monedas = settings.currency;
-    const user = db.getChatUser(msg.chat, msg.sender);
-    if (!args[0]) {
-      return msg.reply(`《✧》 Ingresa la cantidad de *${monedas}* que quieras *depositar*.`);
+    const monedas = settings.currency || 'Yenes';
+
+    // Monto de la apuesta
+    const rawMonto = args.find(a => /^\d+$/.test(a.replace(/[^0-9]/g, '')));
+    const montoArg = rawMonto ? parseInt(rawMonto.replace(/[^0-9]/g, '')) : NaN;
+    const apuesta = (!isNaN(montoArg) && montoArg > 0) ? montoArg : 1000;
+
+    // Obtener datos de los usuarios
+    const userRetador = db.getChatUser(chatId, msg.sender);
+    const userRetado = db.getChatUser(chatId, retado);
+
+    const totalRetador = (userRetador?.coins || 0) + (userRetador?.bank || 0);
+    const totalRetado = (userRetado?.coins || 0) + (userRetado?.bank || 0);
+
+    if (totalRetador < apuesta) {
+      return msg.reply(`❌ No tienes suficientes ${monedas}. Tienes en total: ¥${totalRetador.toLocaleString()}`);
     }
-    if (args[0] < 1 && args[0].toLowerCase() !== 'all') {
-      return msg.reply('✎ Ingresa una cantidad *válida* para depositar');
+
+    if (totalRetado < apuesta) {
+      return msg.reply(`❌ El usuario mencionado no tiene ¥${apuesta.toLocaleString()} ${monedas} en total.`);
     }
-    if (args[0].toLowerCase() === 'all') {
-      if (user.coins <= 0) return msg.reply(`✎ No tienes *${monedas}* para depositar en tu *banco*`);
-      const count = user.coins;
-      db.setChatUser(msg.chat, msg.sender, 'coins', 0);
-      db.setChatUser(msg.chat, msg.sender, 'bank', (user.bank || 0) + count);
-      await msg.reply(`ꕥ Has depositado *¥${count.toLocaleString()} ${monedas}* en tu Banco`);
-      return true;
-    }        
-    if (!Number(args[0]) || parseInt(args[0]) < 1) {
-      return msg.reply('《✧》 Ingresa una cantidad *válida* para depositar');
-    }    
-    const count = parseInt(args[0]);        
-    if (user.coins <= 0 || user.coins < count) {
-      return msg.reply(`❀ No tienes suficientes *${monedas}* para depositar`);
-    }        
-    db.setChatUser(msg.chat, msg.sender, 'coins', (user.coins || 0) - count);
-    db.setChatUser(msg.chat, msg.sender, 'bank', (user.bank || 0) + count);    
-    await msg.reply(`ꕥ Has depositado *¥${count.toLocaleString()} ${monedas}* en tu Banco`);
+
+    // Crear la partida
+    global.tictactoe[chatId] = {
+      estado: 'esperando',
+      retador: msg.sender,
+      retado,
+      turno: msg.sender,
+      apuesta,
+      tablero: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      timeout: setTimeout(() => {
+        if (global.tictactoe[chatId]?.estado === 'esperando') {
+          delete global.tictactoe[chatId];
+          msg.reply('⏱️ El reto de gato expiró porque no respondieron a tiempo.');
+        }
+      }, 60000)
+    };
+
+    await sock.reply(
+      chatId,
+      `🥊 *¡DESAFÍO GATO!*\n\n` +
+      `👤 @${msg.sender.split('@')[0]} retó a @${retado.split('@')[0]}\n` +
+      `💰 *Apuesta:* ¥${apuesta.toLocaleString()} ${monedas}\n\n` +
+      `👉 @${retado.split('@')[0]}, responde con *aceptar* o *rechazar* para jugar.`,
+      msg,
+      { mentions: [msg.sender, retado] }
+    );
   }
 };
