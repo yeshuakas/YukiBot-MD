@@ -1,13 +1,13 @@
 import db from '#db';
 
-// Función para renderizar el tablero con emojis
+// Función para renderizar el tablero correctamente con emojis
 function renderBoard(board) {
-  const symbols = board.map(cell => {
+  const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+  
+  const symbols = board.map((cell, index) => {
     if (cell === 'X') return '❌';
     if (cell === 'O') return '⭕';
-    // Números del 1 al 9 en emojis para indicar las casillas vacías
-    const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
-    return numEmojis[cell];
+    return numEmojis[index]; // Si está libre, devuelve el emoji del número 1 al 9
   });
 
   return (
@@ -63,7 +63,7 @@ export default {
         const userRetado = db.getChatUser(chatId, game.retado) || {};
 
         const totalRetador = (userRetador.coins || 0) + (userRetador.bank || 0);
-        const totalRetado = (userRetador.coins || 0) + (userRetado.bank || 0);
+        const totalRetado = (userRetado.coins || 0) + (userRetado.bank || 0);
 
         if (totalRetador < game.apuesta || totalRetado < game.apuesta) {
           delete global.tictactoe[chatId];
@@ -72,8 +72,8 @@ export default {
 
         // Cambiar estado a jugando
         game.estado = 'jugando';
-        game.simboloRetador = '❌';
-        game.simboloRetado = '⭕';
+        game.simboloRetador = 'X';
+        game.simboloRetado = 'O';
 
         const idBot = sock.user.id.split(':')[0] + '@s.whatsapp.net';
         const settings = db.getSettings(idBot);
@@ -103,10 +103,10 @@ export default {
 
       const pos = parseInt(text) - 1;
       if (isNaN(pos) || pos < 0 || pos > 8 || typeof game.tablero[pos] !== 'number') {
-        return; // Mensaje no es un número válido de casilla
+        return; // Mensaje no es un número válido de casilla disponible
       }
 
-      // Colocar símbolo
+      // Colocar símbolo ('X' u 'O')
       const simboloActual = msg.sender === game.retador ? game.simboloRetador : game.simboloRetado;
       game.tablero[pos] = simboloActual;
 
@@ -124,7 +124,7 @@ export default {
         const userPerdedor = db.getChatUser(chatId, perdedorJid) || {};
         const userGanador = db.getChatUser(chatId, ganadorJid) || {};
 
-        // Restar apuesta al perdedor (prioridad de coins, luego bank)
+        // Restar apuesta al perdedor
         if ((userPerdedor.coins || 0) >= game.apuesta) {
           db.setChatUser(chatId, perdedorJid, 'coins', userPerdedor.coins - game.apuesta);
         } else {
@@ -165,11 +165,11 @@ export default {
 
       // Cambiar de turno
       game.turno = game.turno === game.retador ? game.retado : game.retador;
-      const siguienteSimbolo = game.turno === game.retador ? game.simboloRetador : game.simboloRetado;
+      const siguienteSimboloEmoji = game.turno === game.retador ? '❌' : '⭕';
 
       await sock.reply(
         chatId,
-        ` Turno de: @${game.turno.split('@')[0]} (${siguienteSimbolo})\n\n` +
+        `Turno de: @${game.turno.split('@')[0]} (${siguienteSimboloEmoji})\n\n` +
         `${renderBoard(game.tablero)}`,
         msg,
         { mentions: [game.turno] }
