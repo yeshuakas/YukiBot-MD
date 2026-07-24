@@ -10,6 +10,12 @@ const rewardRanges = {
   imposible2: [15000, 30000] 
 };
 
+// ⏱️ Configuración de tiempos de espera (en milisegundos)
+const COOLDOWNS = {
+  imposible2: 20 * 60 * 1000, // 20 minutos
+  default: 10 * 60 * 1000      // 10 minutos para el resto
+};
+
 const generateRandomNumber = (max) => Math.floor(Math.random() * max) + 1;
 const getOperation = () => ['+', '-', '*'][Math.floor(Math.random() * 3)];
 
@@ -110,6 +116,29 @@ export default {
     if (!limits[dificultad]) {
       return sock.reply(chatId, '「✎」Especifica una dificultad válida: *facil, medio, dificil, imposible, imposible2*', msg);
     }
+
+    // ⏳ VERIFICACIÓN DEL TIEMPO DE ESPERA (COOLDOWN)
+    const user = db.getChatUser(chatId, msg.sender);
+    const now = Date.now();
+    const cooldownTiempo = COOLDOWNS[dificultad] || COOLDOWNS.default;
+    const ultimoUso = user?.mathCooldown?.[dificultad] || 0;
+
+    if (now - ultimoUso < cooldownTiempo) {
+      const tiempoRestanteMs = cooldownTiempo - (now - ultimoUso);
+      const minutos = Math.floor(tiempoRestanteMs / 60000);
+      const segundos = Math.floor((tiempoRestanteMs % 60000) / 1000);
+
+      return sock.reply(
+        chatId, 
+        `⏳ *¡Debes esperar para usar esta dificultad de nuevo!*\n\n> *Dificultad:* ${dificultad}\n> *Tiempo restante:* ${minutos}m ${segundos}s`, 
+        msg
+      );
+    }
+
+    // ✍️ Guardar el timestamp actual en la BD del usuario para esta dificultad
+    const mathCooldown = user?.mathCooldown || {};
+    mathCooldown[dificultad] = now;
+    db.setChatUser(chatId, msg.sender, 'mathCooldown', mathCooldown);
 
     const { problema, resultado } = generarProblema(dificultad);
     const problemMessage = await sock.reply(chatId, `「✩」*¡DESAFÍO GRUPAL DE MATEMÁTICAS!*\nTienen 1 minuto. El primero en responder correctamente gana:\n\n> ✩ *${problema}*\n\n_✐ Responde con el número correcto antes que los demás._`, msg);
