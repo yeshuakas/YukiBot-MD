@@ -121,7 +121,7 @@ export const defSets = {
   link: 'https://api.yuki-wabot.my.id',
   banner: 'https://cdn.yuki-wabot.my.id/files/tCVD.jpeg',
   icon: 'https://cdn.yuki-wabot.my.id/files/4U5V.jpeg',
-  currency: 'Yenes',
+  currency: 'PokeDollar',
   namebot: 'Yuki',
   botname: 'Yuki Suou',
   owner: ''
@@ -194,7 +194,7 @@ export function initDB() {
       link TEXT DEFAULT 'https://api.yuki-wabot.my.id',
       banner TEXT DEFAULT 'https://cdn.yuki-wabot.my.id/files/tCVD.jpeg',
       icon TEXT DEFAULT 'https://cdn.yuki-wabot.my.id/files/4U5V.jpeg',
-      currency TEXT DEFAULT 'Yenes',
+      currency TEXT DEFAULT 'PokeDollar',
       namebot TEXT DEFAULT 'Yuki',
       botname TEXT DEFAULT 'Yuki Suou',
       owner TEXT DEFAULT ''

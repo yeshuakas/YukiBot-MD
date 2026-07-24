@@ -7,9 +7,9 @@ global.owner = ['524428178176', '524428178176'];
 global.dev = "© Creado por Yeshua";
 global.links = {
   api: 'https://api.yuki-wabot.my.id',
-  channel: "https://whatsapp.com/channel/0029Vb64nWqLo4hb8cuxe23n",
-  github: "https://github.com/iamDestroy/YukiBot-MD",
-  gmail: "thekingdestroy507@gmail.com"
+  channel: "",
+  github: "https://github.com/yeshuakas/YukiBot-MD",
+  gmail: ""
 }
 global.my = {
   ch1: '120363401404146384@newsletter'

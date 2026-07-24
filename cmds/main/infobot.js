@@ -12,7 +12,7 @@ export default {
     const botSettings = db.getSettings(botId) || {};
     const botname = botSettings.botname || 'Bot';
     const namebot = botSettings.namebot || 'Bot';
-    const monedas = botSettings.currency || 'Yenes';
+    const monedas = botSettings.currency || 'PokeDollar';
     const banner = botSettings.banner || '';
     const prefijo = botSettings.prefix;
     const owner = botSettings.owner || '';
