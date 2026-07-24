@@ -1,18 +1,41 @@
 import db from '#db';
 global.math = global.math || {};
 
-const limits = { facil: 10, medio: 50, dificil: 90, imposible: 100, imposible2: 160 };
-const rewardRanges = { facil: [500, 1000], medio: [1000, 2000], dificil: [2000, 3500], imposible: [3500, 4800], imposible2: [5000, 6500] };
+const limits = { facil: 10, medio: 50, dificil: 90, imposible: 100, imposible2: 500 };
+const rewardRanges = { 
+  facil: [500, 1000], 
+  medio: [1000, 2000], 
+  dificil: [2000, 3500], 
+  imposible: [3500, 5000], 
+  imposible2: [15000, 30000] 
+};
 
 const generateRandomNumber = (max) => Math.floor(Math.random() * max) + 1;
-const getOperation = () => ['+', '-', '*', '/'][Math.floor(Math.random() * 4)];
+const getOperation = () => ['+', '-', '*'][Math.floor(Math.random() * 3)];
 
 const generarProblema = (dificultad) => {
+  if (dificultad === 'imposible2') {
+    const num1 = generateRandomNumber(limits.imposible2);
+    const num2 = generateRandomNumber(100);
+    const num3 = generateRandomNumber(limits.imposible2);
+    const op1 = getOperation();
+    const op2 = getOperation();
+
+    const resultado = eval(`(${num1} ${op1} ${num2}) ${op2} ${num3}`);
+    const sym1 = op1 === '*' ? '×' : op1;
+    const sym2 = op2 === '*' ? '×' : op2;
+
+    return { problema: `(${num1} ${sym1} ${num2}) ${sym2} ${num3}`, resultado };
+  }
+
   const maxLimit = limits[dificultad] || 30;
   const num1 = generateRandomNumber(maxLimit);
   const num2 = generateRandomNumber(maxLimit);
-  const operador = getOperation();
-  const resultado = eval(`${num1} ${operador} ${num2}`);
+  const operador = ['+', '-', '*', '/'][Math.floor(Math.random() * 4)];
+  
+  let resultado = eval(`${num1} ${operador} ${num2}`);
+  if (operador === '/') resultado = parseFloat(resultado.toFixed(2));
+
   const simbolo = operador === '*' ? '×' : operador === '/' ? '÷' : operador;
   return { problema: `${num1} ${simbolo} ${num2}`, resultado };
 };
@@ -21,33 +44,55 @@ export default {
   command: ['math', 'mates'],
   category: 'economy',
   description: 'Iniciar un juego de matemáticas.',
-  before: async ({ msg, sock }) => {
+  before: async ({ msg, sock, usedPrefix }) => {
     const chatId = msg.chat;
     const juego = global.math[chatId];
     if (!juego?.juegoActivo) return;
-    const respuestaUsuario = parseFloat(msg.text?.trim());
-    if (isNaN(respuestaUsuario)) return;
+
     const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
     const chat = db.getChat(chatId);
     if (chat.primaryBot && chat.primaryBot !== botId) return;
+
+    const texto = msg.text?.trim().toLowerCase() || '';
+
+    // 🛑 1. DETECTOR Y BLOQUEO DE TRAMPAS (IA / ChatGPT)
+    const comandosIA = ['#chatgpt', '#ia', '#gpt', '#gemini', '#bot']; // Comandos bloqueados
+    const intentoTrampa = comandosIA.some(cmd => texto.startsWith(cmd) || (usedPrefix && texto.startsWith(usedPrefix)));
+
+    if (intentoTrampa && (texto.includes('chatgpt') || texto.includes('gpt') || texto.includes('ia'))) {
+      const user = db.getChatUser(chatId, msg.sender);
+      const nuevasWarns = (user.warns || 0) + 1;
+
+      // Registrar la advertencia en la base de datos
+      db.setChatUser(chatId, msg.sender, 'warns', nuevasWarns);
+
+      await sock.reply(
+        chatId, 
+        `🚨 *¡SISTEMA ANTI-TRAMPAS!* 🚨\n\n@${msg.sender.split('@')[0]} Intentaste usar IA durante un juego activo.\n> *Advertencia agregada:* (${nuevasWarns}/3)\n\n*¡Resuelve las matemáticas por tu cuenta!*`, 
+        msg, 
+        { mentions: [msg.sender] }
+      );
+      return true; // Cancela la ejecución del comando de IA
+    }
+
+    // 2. COMPROBACIÓN DE RESPUESTA DE MATEMÁTICAS
+    const respuestaUsuario = parseFloat(texto);
+    if (isNaN(respuestaUsuario)) return;
+
     const user = db.getChatUser(chatId, msg.sender);
     const respuestaCorrecta = parseFloat(juego.respuesta);
+
     if (respuestaUsuario === respuestaCorrecta) {
       const [min, max] = rewardRanges[juego.dificultad] || [500, 1000];
       const coinsAleatorio = Math.floor(Math.random() * (max - min + 1)) + min;
+      
       db.setChatUser(chatId, msg.sender, 'coins', (user.coins || 0) + coinsAleatorio);
       clearTimeout(juego.tiempoLimite);
       delete global.math[chatId];
-      await sock.reply(chatId, `「❀」Respuesta correcta.\n> *Ganaste ›* ¥${coinsAleatorio.toLocaleString()}`, msg);
+      
+      await sock.reply(chatId, `「⚡」¡@${msg.sender.split('@')[0]} fue el más rápido y acertó!\n> *Ganaste ›* Yenes $${coinsAleatorio.toLocaleString()}`, msg, { mentions: [msg.sender] });
     } else {
-      juego.intentos += 1;
-      if (juego.intentos >= 3) {
-        clearTimeout(juego.tiempoLimite);
-        delete global.math[chatId];
-        await sock.reply(chatId, '「✎」Te quedaste sin intentos. Suerte a la próxima.', msg);
-      } else {
-        await sock.reply(chatId, `「✎」Respuesta incorrecta, te quedan ${3 - juego.intentos} intentos.`, msg);
-      }
+      await sock.reply(chatId, `「❌」Respuesta incorrecta. ¡El juego sigue activo para todo el grupo!`, msg);
     }
     return true;
   },
@@ -58,18 +103,28 @@ export default {
       return msg.reply(`ꕥ Los comandos de *Economía* están desactivados en este grupo.\n\nUn *administrador* puede activarlos con el comando:\n» *${usedPrefix}economy on*`);
     }
     if (global.math[chatId]?.juegoActivo) {
-      return sock.reply(chatId, 'ꕥ Ya hay un juego activo. Espera a que termine.', msg);
+      return sock.reply(chatId, 'ꕥ Ya hay un desafío de matemáticas activo en este grupo. ¡Respondan rápido!', msg);
     }
+    
     const dificultad = args[0]?.toLowerCase();
     if (!limits[dificultad]) {
       return sock.reply(chatId, '「✎」Especifica una dificultad válida: *facil, medio, dificil, imposible, imposible2*', msg);
     }
+
     const { problema, resultado } = generarProblema(dificultad);
-    const problemMessage = await sock.reply(chatId, `「✩」Tienes 1 minuto para resolver:\n\n> ✩ *${problema}*\n\n_✐ Responde con el número correcto!_`, msg);
-    global.math[chatId] = { juegoActivo: true, problema, respuesta: resultado.toString(), intentos: 0, dificultad, timeout: Date.now() + 60000, problemMessageId: problemMessage.key?.id, tiempoLimite: setTimeout(() => {
+    const problemMessage = await sock.reply(chatId, `「✩」*¡DESAFÍO GRUPAL DE MATEMÁTICAS!*\nTienen 1 minuto. El primero en responder correctamente gana:\n\n> ✩ *${problema}*\n\n_✐ Responde con el número correcto antes que los demás._`, msg);
+    
+    global.math[chatId] = { 
+      juegoActivo: true, 
+      problema, 
+      respuesta: resultado.toString(), 
+      dificultad, 
+      timeout: Date.now() + 60000, 
+      problemMessageId: problemMessage.key?.id, 
+      tiempoLimite: setTimeout(() => {
         if (global.math[chatId]?.juegoActivo) {
           delete global.math[chatId];
-          sock.reply(chatId, `「✿」Tiempo agotado. La respuesta era *${resultado}*.`, msg);
+          sock.reply(chatId, `「✿」Tiempo agotado. Nadie logró responder a tiempo. La respuesta era *${resultado}*.`, msg);
         }
       }, 60000)
     };
