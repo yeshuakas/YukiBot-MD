@@ -34,22 +34,24 @@ export default {
     const settings = db.getSettings(idBot);
     const monedas = settings.currency || 'Yenes';
 
-    // Monto de la apuesta
-    const rawMonto = args.find(a => /^\d+$/.test(a.replace(/[^0-9]/g, '')));
-    const montoArg = rawMonto ? parseInt(rawMonto.replace(/[^0-9]/g, '')) : NaN;
+    // EXTRAER LA APUESTA CORRECTAMENTE:
+    // Filtramos los argumentos descartando las menciones (@...) y buscando el número escrito al final
+    const cleanArgs = args.filter(a => !a.includes('@'));
+    const rawMonto = cleanArgs.find(a => /^\d+$/.test(a.trim()));
+    const montoArg = rawMonto ? parseInt(rawMonto) : NaN;
     const apuesta = (!isNaN(montoArg) && montoArg > 0) ? montoArg : 1000;
 
     // Obtener datos de los usuarios desde la DB
     const userRetador = db.getChatUser(chatId, msg.sender) || {};
     const userRetado = db.getChatUser(chatId, retado) || {};
 
-    // Detección flexible de saldo (coins, bank, yen, etc.)
-    const retadorCoins = Number(userRetador.coins || userRetador.yen || userRetador.monedas || 0);
-    const retadorBank = Number(userRetador.bank || userRetador.banco || 0);
+    // Detección de saldo (coins + bank)
+    const retadorCoins = Number(userRetador.coins || 0);
+    const retadorBank = Number(userRetador.bank || 0);
     const totalRetador = retadorCoins + retadorBank;
 
-    const retadoCoins = Number(userRetado.coins || userRetado.yen || userRetado.monedas || 0);
-    const retadoBank = Number(userRetado.bank || userRetado.banco || 0);
+    const retadoCoins = Number(userRetado.coins || 0);
+    const retadoBank = Number(userRetado.bank || 0);
     const totalRetado = retadoCoins + retadoBank;
 
     if (totalRetador < apuesta) {
