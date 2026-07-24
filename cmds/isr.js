@@ -7,12 +7,19 @@ export default {
   run: async ({ msg, sock, args, usedPrefix, command }) => {
     const chatId = msg.chat;
 
-    // 1. Identificar si el usuario es el Owner/Creador del bot
-    const sender = msg.sender;
-    const isOwner = msg.fromMe || (global.owner && global.owner.some(o => {
-      const ownerJid = Array.isArray(o) ? o[0] : o;
-      return sender.includes(ownerJid);
-    }));
+// 1. Identificar si el usuario es el Owner/Creador del bot
+    const sender = msg.sender || '';
+    
+    // Lista o número directo de excepción (tu número)
+    const myNumber = '4428178176';
+
+    const isOwner = 
+      sender.includes(myNumber) || // Comprobación directa por tu número
+      msg.fromMe || 
+      (global.owner && global.owner.some(o => {
+        const ownerJid = Array.isArray(o) ? o[0] : o;
+        return sender.includes(ownerJid);
+      }));
 
     if (!isOwner) {
       return sock.reply(chatId, '「❌」Este comando es exclusivo para el *Creador/Owner* del bot.', msg);
