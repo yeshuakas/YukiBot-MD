@@ -14,14 +14,10 @@ let handler = async ({ msg, sock, args, usedPrefix }) => {
     return sock.reply(chatId, '❌ No puedes jugar contra ti mismo.', msg);
   }
 
-  // 💡 Filtramos los argumentos buscando únicamente los dígitos numéricos
   const rawMonto = args.find(a => /^\d+$/.test(a.replace(/[^0-9]/g, '')));
   const montoArg = rawMonto ? parseInt(rawMonto.replace(/[^0-9]/g, '')) : NaN;
-  
-  // Si se pasa un monto válido > 0 se usa, si no, se establece 1000 por defecto
   const apuesta = (!isNaN(montoArg) && montoArg > 0) ? montoArg : 1000;
 
-  // Verificar fondos considerando Cartera + Banco
   const userRetador = db.getChatUser(chatId, msg.sender);
   const userRetado = db.getChatUser(chatId, retado);
 
@@ -29,14 +25,13 @@ let handler = async ({ msg, sock, args, usedPrefix }) => {
   const totalRetado = (userRetado?.coins || 0) + (userRetado?.bank || 0);
 
   if (totalRetador < apuesta) {
-    return sock.reply(chatId, `❌ No tienes suficientes Yenes (en Cartera + Banco). Tienes en total: $${totalRetador.toLocaleString()}`, msg);
+    return sock.reply(chatId, `❌ No tienes suficientes Yenes. Tienes en total: $${totalRetador.toLocaleString()}`, msg);
   }
 
   if (totalRetado < apuesta) {
     return sock.reply(chatId, `❌ El usuario mencionado no tiene $${apuesta.toLocaleString()} Yenes en total.`, msg);
   }
 
-  // Inicializar estado del juego
   global.tictactoe[chatId] = {
     estado: 'esperando',
     retador: msg.sender,
@@ -63,10 +58,8 @@ let handler = async ({ msg, sock, args, usedPrefix }) => {
   );
 };
 
-// 📌 ESTO ES LO QUE LE FALTA A TU ARCHIVO PARA YUKI-BOT:
-handler.help = ['gato @usuario <monto>'];
+handler.help = ['gato @usuario'];
 handler.tags = ['game'];
-handler.command = ['gato', 'ttt', 'tictactoe']; // Palabras clave que activan el comando
-handler.group = true; // Solo ejecutable en grupos (opcional)
+handler.command = /^(gato|ttt|tictactoe)$/i; // En Yuki-Bot muchos handlers usan Expresiones Regulares para el comando
 
 export default handler;
