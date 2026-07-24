@@ -39,12 +39,18 @@ export default {
     const montoArg = rawMonto ? parseInt(rawMonto.replace(/[^0-9]/g, '')) : NaN;
     const apuesta = (!isNaN(montoArg) && montoArg > 0) ? montoArg : 1000;
 
-    // Obtener datos de los usuarios
-    const userRetador = db.getChatUser(chatId, msg.sender);
-    const userRetado = db.getChatUser(chatId, retado);
+    // Obtener datos de los usuarios desde la DB
+    const userRetador = db.getChatUser(chatId, msg.sender) || {};
+    const userRetado = db.getChatUser(chatId, retado) || {};
 
-    const totalRetador = (userRetador?.coins || 0) + (userRetador?.bank || 0);
-    const totalRetado = (userRetado?.coins || 0) + (userRetado?.bank || 0);
+    // Detección flexible de saldo (coins, bank, yen, etc.)
+    const retadorCoins = Number(userRetador.coins || userRetador.yen || userRetador.monedas || 0);
+    const retadorBank = Number(userRetador.bank || userRetador.banco || 0);
+    const totalRetador = retadorCoins + retadorBank;
+
+    const retadoCoins = Number(userRetado.coins || userRetado.yen || userRetado.monedas || 0);
+    const retadoBank = Number(userRetado.bank || userRetado.banco || 0);
+    const totalRetado = retadoCoins + retadoBank;
 
     if (totalRetador < apuesta) {
       return msg.reply(`❌ No tienes suficientes ${monedas}. Tienes en total: ¥${totalRetador.toLocaleString()}`);
