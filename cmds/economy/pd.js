@@ -1,16 +1,17 @@
 import db from '#db'
 
-// Almacén en memoria para controlar el juego activo por chat
+// Mapa en memoria para almacenar las palabras activas por cada chat
 export const activeGames = new Map()
 
 const PALABRAS = [
   'PROGRAMACION', 'DESARROLLADOR', 'TECNOLOGIA', 'MATEMATICAS',
   'INTELIGENCIA', 'ALGORITMO', 'ASTRONOMIA', 'AUTOMATIZACION',
   'ELECTRONICA', 'VIDEOJUEGO', 'DOPAMINA', 'ARQUITECTURA',
-  'DINOSAURIO', 'EXTRAORDINARIO', 'ESPECTACULAR', 'MURCIELAGO'
+  'DINOSAURIO', 'EXTRAORDINARIO', 'ESPECTACULAR', 'MURCIELAGO',
+  'COMPUTADORA', 'INTELIGENTE', 'SERVIDORES', 'CIBERNETICA'
 ]
 
-export function shuffleWord(word) {
+function shuffleWord(word) {
   const arr = word.split('')
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -27,7 +28,7 @@ export function iniciarJuegoPD(sock, chatId, currency = 'Yenes') {
   const palabraDesordenada = shuffleWord(palabraOriginal)
   const startTime = Date.now()
 
-  // Cancelar automáticamente a los 3 minutos si nadie responde
+  // Se cancela si pasan 3 minutos sin respuesta
   const timeoutId = setTimeout(async () => {
     if (activeGames.has(chatId)) {
       activeGames.delete(chatId)
@@ -57,7 +58,7 @@ export default {
   command: ['pd', 'palabradesordenada'],
   category: 'economy',
   description: 'Iniciar manualmente el juego de Palabra Desordenada.',
-  run: async ({ msg, sock, isOwner, usedPrefix }) => {
+  run: async ({ msg, sock, isOwner }) => {
     const chat = db.getChat(msg.chat)
     if (chat.adminonly || !chat.economy) {
       return msg.reply(`ꕥ Los minijuegos de economía están desactivados en este chat.`)
