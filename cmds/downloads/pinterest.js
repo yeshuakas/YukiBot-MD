@@ -51,10 +51,10 @@ export default {
         }
 
         const medias = results
-          .slice(0, 6) // Enviamos hasta 6 imágenes en el álbum
+          .slice(0, 6) // Máximo 6 imágenes
           .filter(r => r.image)
           .map(r => ({
-            type: r.type === 'video' ? 'video' : 'image',
+            type: 'image',
             data: { url: r.image },
             caption: `ㅤ۟∩ ׅ ★ ׅ 🅟𝖨𝖭 🅢earch ׄᰙ \n\n${r.title ? `𖣣ֶㅤ֯⌗ ☆  ⬭ *Título* › ${r.title}\n` : ''}𖣣ֶㅤ֯⌗ ☆  ⬭ *Búsqueda* › ${text}`
           }))
@@ -63,7 +63,6 @@ export default {
           return msg.reply(`《✧》 No se pudieron obtener descargas válidas para *${text}*.`)
         }
 
-        // Si tu bot soporta sendAlbumMessage usa la primera línea; de lo contrario envía la primera imagen
         if (sock.sendAlbumMessage) {
           await sock.sendAlbumMessage(msg.chat, medias, { quoted: msg })
         } else {
@@ -78,71 +77,82 @@ export default {
   }
 }
 
-// Scraper de búsqueda alternativo usando la API interna de Pinterest
+// Sistema de búsqueda con 3 servicios en cascada
 async function getPinterestSearch(query) {
+  // Opción 1: API Deliriodev
   try {
-    const url = `https://www.pinterest.com/resource/BaseSearchResource/get/?data=${encodeURIComponent(
-      JSON.stringify({
-        options: {
-          isPrefetch: false,
-          query: query,
-          scope: "pins",
-          no_fetch_context_on_resource: false
-        },
-        context: {}
-      })
-    )}`
-
-    const res = await fetchJson(url)
-    const results = res?.resource_response?.data?.results || []
-
-    return results
-      .filter(v => v.images && v.images.originals)
-      .map(v => ({
-        type: 'image',
-        title: v.grid_title || v.title || v.description || 'Pinterest Image',
-        image: v.images.originals.url,
-        url: `https://www.pinterest.com/pin/${v.id}/`
+    const res = await fetchJson(`https://api.delirius.site/search/pinterest?q=${encodeURIComponent(query)}`)
+    if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+      return res.data.map(item => ({
+        title: item.title || item.description || query,
+        image: item.image || item.url
       }))
-  } catch {
-    // Fallback secundario si Pinterest bloquea la solicitud directa
-    try {
-      const fallbackUrl = `https://api.lolhuman.xyz/api/pinterest?apikey=GataDios&query=${encodeURIComponent(query)}`
-      const res = await fetchJson(fallbackUrl)
-      if (res.result) {
-        const list = Array.isArray(res.result) ? res.result : [res.result]
-        return list.map(img => ({ type: 'image', title: query, image: img }))
-      }
-    } catch {
-      return []
     }
-    return []
+  } catch (e) {
+    // Continuar al siguiente si falla
   }
+
+  // Opción 2: API BK9
+  try {
+    const res = await fetchJson(`https://bk9.fun/search/pinterest?q=${encodeURIComponent(query)}`)
+    if (res?.status && Array.isArray(res.BK9) && res.BK9.length > 0) {
+      return res.BK9.map(item => ({
+        title: item.grid_title || item.title || query,
+        image: item.images_url || item.image
+      }))
+    }
+  } catch (e) {
+    // Continuar al siguiente si falla
+  }
+
+  // Opción 3: API Siputzx
+  try {
+    const res = await fetchJson(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`)
+    if (res?.status && Array.isArray(res.data) && res.data.length > 0) {
+      return res.data.map(item => ({
+        title: item.title || query,
+        image: item.images || item.image_url || item.url
+      }))
+    }
+  } catch (e) {
+    // Fin de las opciones
+  }
+
+  return []
 }
 
-// Descargar enlace de Pinterest directo
+// Descargar enlace de Pinterest
 async function getPinterestDownload(url) {
   try {
-    const endpoint = `https://api.vreden.web.id/api/pinterest?url=${encodeURIComponent(url)}`
-    const res = await fetchJson(endpoint)
-
-    if (res.result) {
-      const data = res.result
-      const mediaUrl = data.url || data.image || data.video
-      const isVideo = !!data.video || /\.mp4/i.test(mediaUrl)
-
+    const res = await fetchJson(`https://api.delirius.site/download/pinterest?url=${encodeURIComponent(url)}`)
+    if (res?.status && res?.data) {
+      const isVideo = !!res.data.video
       return {
         type: isVideo ? 'video' : 'image',
-        title: data.title || 'Pinterest Pin',
-        url: mediaUrl
+        title: res.data.title || 'Pinterest Pin',
+        url: res.data.video || res.data.image
       }
     }
   } catch {
-    return null
+    try {
+      const res = await fetchJson(`https://bk9.fun/download/pinterest?url=${encodeURIComponent(url)}`)
+      if (res?.status && res?.BK9) {
+        const mediaUrl = res.BK9.url || res.BK9.image
+        const isVideo = /\.mp4/i.test(mediaUrl)
+        return {
+          type: isVideo ? 'video' : 'image',
+          title: 'Pinterest Pin',
+          url: mediaUrl
+        }
+      }
+    } catch {
+      return null
+    }
   }
+  return null
 }
 
-async function fetchJson(url, timeout = 15000) {
+async function fetchJson(url, timeout = 12000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
 
