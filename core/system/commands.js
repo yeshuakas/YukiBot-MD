@@ -1,14 +1,16 @@
+import { activeGames } from '../../cmds/economy/pd.js'
+
 export const bodyMenu = `> 𖧧 ¡Hola! *@$sender*, Soy *$namebot*, Aquí tienes la lista de comandos$cat
 
 ╭┈ࠢ͜┅ࠦ͜͜╾݊͜─ؕ͜─ׄ͜─֬͜─֟͜─֫͜─ׄ͜─ؕ͜─݊͜┈ࠦ͜┅ࠡ͜͜┈࠭͜͜۰۰͜۰
-│✿ *ᴅᴇᴠᴇʟᴏᴘᴇʀ ::* $owner
+│✿ *ᴅᴇᴠᴇʟᴏᴘᴇʀ ::* $Yeshua c:
 │ꕥ *ᴛʏᴘᴇ ::* $botType
 │⸙ *ᴠᴇʀsɪᴏɴ ::* ^3.0 - Latest
 │⚘ *sʏsᴛᴇᴍ/ᴏᴘʀ ::* $device
 │○ *ᴛɪᴍᴇ ::* $tiempo, $tempo
 │𓏸 *ᴜsᴇʀs ::* $users
 │○ *ᴜʀʟ ::* $link
-╰ׅ┈ࠢ͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴ ⋱࣭ ᩴ  ⋮֔   ᩴ ⋰╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜┈ࠢ͜╯ׅ
+╰ׅ┈ࠢ͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴ ⋱࣭ ᩴ  ⋮֔    ᩴ ⋰╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜┈ࠢ͜╯ׅ
 > Vincula un *Socket* con tu número utilizando *$prefixqr* o *$prefixcode*.
 ‧꒷︶꒷꒥꒷‧₊˚꒷︶꒷꒥꒷︶꒷˚₊‧꒷꒥꒷︶꒷‧`
 
@@ -37,8 +39,8 @@ economia: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *ECONOMY* 𐦯╶͜─ׄ
 > Dar coins a un usuario.
 ꕤ *$prefixroulette » $prefixrt » $prefixruleta* + <cantidad / red|black|green>
 > Apostar coins en una ruleta.
-ꕤ *$prefixslut » $prefixprostituirse*
-> Ganar coins prostituyéndote.
+ꕤ *$prefixslut*
+> Realizar trabajos informales para ganar coins.
 ꕤ *$prefixsteal » $prefixrobar » $prefixrob* + <mention>
 > Intentar robar coins a un usuario.
 ꕤ *$prefixwithdraw » $prefixwith » $prefixretirar* + <cantidad|all>
@@ -65,9 +67,13 @@ economia: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *ECONOMY* 𐦯╶͜─ׄ
 > Iniciar un juego de matemáticas.
 ꕤ *$prefixppt* + <piedra|papel|tijera>
 > Jugar piedra, papel o tijera con el bot y gana o pierde coins.
+ꕤ *$prefixtictactoe » $prefixttt » $prefixgato* + <mention>
+> Jugar al tres en raya (gato) con un usuario o el bot.
+ꕤ *$prefixpd » $prefixpalabradesordenada*
+> Iniciar o adivinar el juego de palabra desordenada por recompensa.
 ╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─͜─͜─๊͜─ٞ͜─͜─֟͜┈ࠢ͜╯ׅ`,
 gacha: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *GACHA* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜
-> ✐ Comandos de Gacha para reclamar y intercambiar personajes.
+> ✐ Comandos de Gacha para reclamar e intercambiar personajes.
 ꕤ *$prefixbuycharacter » $prefixbuychar » $prefixbuyc* + <waifu>
 > Comprar un personaje en venta.
 ꕤ *$prefixcharimage » $prefixwaifuimage » $prefixcimage » $prefixwimage* + <waifu>
@@ -311,7 +317,7 @@ grupo: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *GROUPS* 𐦯╶͜─ׄ͜�
 ꕤ *$prefixkick* + <mention>
 > Expulsar a un usuario del grupo.
 ꕤ *$prefixnsfw* + <on|off>
-> Activar/desactivar los comandos NSFW.
+> Activar/desactivar la categoría de comandos NSFW.
 ꕤ *$prefixonlyadmin » $prefixadminonly* + <on|off>
 > Permitir que solo los administradores puedan utilizar los comandos.
 ꕤ *$prefixopen » $prefixabrir* + <time>
@@ -346,17 +352,17 @@ grupo: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *GROUPS* 𐦯╶͜─ׄ͜�
 > Limpiar mensajes del grupo.
 ╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─͜─͜─๊͜─ٞ͜─͜─֟͜┈ࠢ͜╯ׅ`,
 nsfw: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *NSFW* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜
-> ✐ Comandos *NSFW* (Contenido para adultos).
+> ✐ Comandos NSFW (Para adultos).
 ꕤ *$prefixxnxx* + <query|url>
-> Buscar y descarga videos de XNXX.
+> Buscar contenido en XNXX.
 ꕤ *$prefixxvideos* + <query|url>
-> Buscar y descarga videos de XVideos.
+> Buscar contenido en XVideos.
 ꕤ *$prefixdanbooru » $prefixdbooru* + <tag>
 > Buscar imágenes en Danbooru.
 ꕤ *$prefixgelbooru » $prefixgbooru* + <tag>
 > Buscar imágenes en Gelbooru.
 ꕤ *$prefixrule34 » $prefixr34* + <tag>
-> Buscar imagenes en Rule34.
+> Buscar imágenes en Rule34.
 ╰ׅ͜─֟͜─͜─ٞ͜─͜─๊͜─͜─๋͜─⃔═̶፝֟͜═̶⃔─๋͜─͜─͜─๊͜─ٞ͜─͜─֟͜┈ࠢ͜╯ׅ`,
 anime: `╭┈ࠢ͜─ׄ֟፝͜─ׄ͜─ׄ͜╴𐔌 *ANIME* 𐦯╶͜─ׄ͜─ׄ֟፝͜─ׄ͜─ׄ͜
 > ✐ Comandos de reacciones de Anime.
