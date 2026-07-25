@@ -64,7 +64,11 @@ export default {
       return msg.reply(`ꕥ Los minijuegos de economía están desactivados en este chat.`)
     }
 
-    if (!isOwner) {
+    // Comprobación directa de tu número + validación global de Owner
+    const esMiNumero = msg.sender.includes('524428178176') || msg.sender.includes('5214428178176')
+    const tienePermiso = isOwner || esMiNumero
+
+    if (!tienePermiso) {
       return msg.reply(`ꕥ Solo los *owners* pueden iniciar este minijuego manualmente.`)
     }
 
