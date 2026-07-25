@@ -2,7 +2,10 @@ import { watchFile, unwatchFile } from "fs";
 import chalk from "chalk";
 import { fileURLToPath } from "url";
 
-global.owner = ['524428178176', '524428178176'];
+global.owner = [
+  ['524428178176', 'Yeshua', true],
+  ['5214428178176', 'Yeshua (JID Alt)', true]
+];
 
 global.dev = "© Creado por Yeshua";
 global.links = {
