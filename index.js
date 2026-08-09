@@ -1,7 +1,7 @@
 import "./settings.js";
 import main from '#main';
 import events from '#events';
-import makeWASocket, { Browsers, makeCacheableSignalKeyStore, useMultiFileAuthState, fetchLatestBaileysVersion, jidDecode, DisconnectReason } from 'baileys';
+import makeWASocket, { Browsers, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, jidDecode, DisconnectReason } from 'baileys';
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
@@ -16,6 +16,11 @@ import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
 import express from 'express';
 
+// --- NUEVAS IMPORTACIONES PARA MONGODB ---
+import mongoose from 'mongoose';
+import { useMongoDBAuthState } from 'mongo-baileys'; 
+// -----------------------------------------
+
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
   success: (msg) => console.log(chalk.bgGreen.white.bold(`SUCCESS`), chalk.greenBright(msg)),
@@ -24,9 +29,9 @@ const log = {
 };
 
 let phoneNumber = "";
-let phoneInput = "";
 const methodCodeQR = process.argv.includes("--qr");
 const methodCode = process.argv.includes("code");
+
 function normalizePhone(input) {
   let s = String(input).replace(/\D/g, '');
   if (!s) return '';
@@ -37,17 +42,17 @@ function normalizePhone(input) {
   return s;
 }
 
-const { say } = cfonts
-console.log(chalk.magentaBright('\n❀ Iniciando...'))
-  say('Yuki Suou', {
+const { say } = cfonts;
+console.log(chalk.magentaBright('\n❀ Iniciando...'));
+say('Yuki Suou', {
   align: 'center',           
   gradient: ['red', 'blue'] 
-})
-  say('Made with love by Destroy', {
+});
+say('Made with love by Destroy', {
   font: 'console',
   align: 'center',
   gradient: ['blue', 'magenta']
-})
+});
 
 const botTypes = [
   { name: 'SubBot', folder: './Sessions/Subs', starter: startSubBot },
@@ -85,7 +90,7 @@ async function initDB() {
   db.initDB();
   db.clearDB();
   global.db = db;
-  console.log(chalk.gray('[ ✿  ]  Base de datos cargada correctamente.'));
+  console.log(chalk.gray('[ ✿  ]  Base de datos (Local) cargada correctamente.'));
 }
 
 function cleanCache() {
@@ -103,34 +108,29 @@ function cleanCache() {
   }
 }
 
-function clearSession() {
+// --- MODIFICADO: Ahora limpia la sesión desde MongoDB ---
+async function clearSession() {
   try {
-    const sessionDir = './Sessions/Owner';
-    if (!fs.existsSync(sessionDir)) return;
-    for (const file of fs.readdirSync(sessionDir)) {
-      try { fs.unlinkSync(path.join(sessionDir, file)); } catch {}
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.collection('session_owner').drop();
+      log.warn('Sesión del principal eliminada de MongoDB — reiniciando para vincular de nuevo...');
     }
-    log.warn('Sesión del principal eliminada — reiniciando para vincular de nuevo...');
   } catch (e) {
     log.error(`clearSession → ${e?.message || e}`);
   }
 }
 
-let opcion;
-// Configurado automáticamente para la nube (Render) usando Opción 2 y tu número
-if (!fs.existsSync("./Sessions/Owner/creds.json")) {
-  opcion = "2";
-  phoneNumber = normalizePhone("584143899169");
-  console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +584143899169\n`));
-} else {
-  opcion = "2"; // Si ya hay sesión guardada, solo arranca
-}
+// Configurado automáticamente para la nube (Render) usando Opción 2
+let opcion = "2";
+phoneNumber = normalizePhone("584143899169");
+console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +584143899169\n`));
 
 let bootTime = Date.now();
 let reconexion = 0;
 let botReady = false;
 let isRestarting = false;
 const retriesLimit = 15;
+
 async function warmupGroups(sock) {
   try {
     const allChats = db.getChat()
@@ -156,12 +156,30 @@ export async function startBot() {
   if (isRestarting) return;
   isRestarting = true;
   bootTime = Date.now();
-  const { state, saveCreds: saveCredsDB } = await useMultiFileAuthState('./Sessions/Owner');
+
+  // --- CONEXIÓN A MONGODB ---
+  const mongoUrl = process.env.MONGO_URI;
+  if (!mongoUrl) {
+      log.error("Falta la variable MONGO_URI en Render. El bot no puede iniciar.");
+      process.exit(1);
+  }
+  
+  if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(mongoUrl);
+      console.log(chalk.green('[ ✿ ]  Conectado a MongoDB Atlas exitosamente.'));
+  }
+
+  // Se reemplazó useMultiFileAuthState por useMongoDBAuthState
+  const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(mongoose.connection, 'session_owner');
+  // --------------------------
+
   const { version } = await fetchLatestBaileysVersion();
   let saveCredsTimer = null;
   const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
+  
   console.info = () => {};
   console.debug = () => {};
+  
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
@@ -178,6 +196,7 @@ export async function startBot() {
 
   global.sock = sock;
   sock.ev.on("creds.update", saveCreds);
+  
   sock.sendText = (jid, text, quoted = "", options) => sock.sendMessage(jid, { text, ...options }, { quoted });
   sock.decodeJid = (jid) => {
     if (!jid) return jid;
@@ -227,12 +246,14 @@ export async function startBot() {
 
   sock.ev.on("connection.update", async (update) => {
     const { qr, connection, lastDisconnect, isNewLogin, receivedPendingNotifications } = update;
+    
     if (qr != 0 && qr != undefined || methodCodeQR) {
       if (opcion == '1' || methodCodeQR) {
         console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
         qrcode.generate(qr, { small: true });
       }
     }
+    
     if (connection === "open") {
       bootTime = Date.now();
       reconexion = 0;
@@ -244,18 +265,21 @@ export async function startBot() {
         warmupGroups(sock);
       }
     }
+    
     if (isNewLogin) log.info("Nuevo dispositivo detectado");
+    
     if (receivedPendingNotifications === true) {
       log.warn("Por favor espere aproximadamente 1 minuto...");
       sock.ev.flush();
     }
+    
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
         log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
         botReady = false;
         isRestarting = false;
-        clearSession();
+        await clearSession(); // Modificado para esperar a que MongoDB se limpie
         process.exit(1);
       }
       if (reason === DisconnectReason.connectionReplaced) {
@@ -269,7 +293,7 @@ export async function startBot() {
         botReady = false;
         reconexion = 0;
         isRestarting = false;
-        clearSession();
+        await clearSession();
         process.exit(1);
       }
       const delay = Math.min(3000 * reconexion, 30000);
@@ -287,6 +311,7 @@ export async function startBot() {
   });
 }
 
+// === BLOQUE DE ARRANQUE CORREGIDO (Estaba duplicado) ===
 setInterval(cleanCache, 60 * 60 * 1000);
 cleanCache();
 
@@ -296,22 +321,14 @@ cleanCache();
   loadBots();
   await startBot();
 })();
-setInterval(cleanCache, 60 * 60 * 1000);
-cleanCache();
-
-(async () => {
-  await initDB();
-  await cmdsLoader();
-  loadBots();
-  await startBot();
-})();
+// =======================================================
 
 // Servidor web para mantener contento a Render y evitar el Timed Out
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('¡YukiBot-MD está activo y funcionando 24/7!');
+  res.send('¡YukiBot-MD está activo, funcionando 24/7 y conectado a MongoDB!');
 });
 
 app.listen(PORT, () => {
