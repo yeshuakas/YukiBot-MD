@@ -28,7 +28,7 @@
     "npm": ">=10.9.4"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
     "@vitalets/google-translate-api": "latest",
     "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
     "axios": "^0.24.0",
