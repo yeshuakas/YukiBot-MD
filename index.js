@@ -14,6 +14,7 @@ import cmdsLoader from '#system/cmdsLoader';
 import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
+import express from 'express';
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
@@ -295,3 +296,24 @@ cleanCache();
   loadBots();
   await startBot();
 })();
+setInterval(cleanCache, 60 * 60 * 1000);
+cleanCache();
+
+(async () => {
+  await initDB();
+  await cmdsLoader();
+  loadBots();
+  await startBot();
+})();
+
+// Servidor web para mantener contento a Render y evitar el Timed Out
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('¡YukiBot-MD está activo y funcionando 24/7!');
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor web interno escuchando en el puerto ${PORT}`);
+});
