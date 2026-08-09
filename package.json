@@ -28,6 +28,8 @@
     "npm": ">=10.9.4"
   },
   "dependencies": {
+    "mongoose": "^8.0.0",
+    "mongo-baileys": "^1.0.0",
     "express": "^4.19.2",
     "@vitalets/google-translate-api": "latest",
     "aptoide-scraper": "github:DIEGO-OFC/dv-aptoide-scraper",
