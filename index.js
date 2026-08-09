@@ -170,7 +170,17 @@ export async function startBot() {
   }
 
   // Se reemplazó useMultiFileAuthState por useMongoDBAuthState
-  const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(mongoose.connection, 'session_owner');
+  // --- CORRECCIÓN PARA MONGODB ---
+  // Accedemos a la base de datos nativa que usa Mongoose y elegimos una colección
+  const dbName = "whatsapp_bot"; // Puedes cambiar "whatsapp_bot" por el nombre que quieras
+  const collectionName = "session_owner";
+  
+  // Obtenemos el objeto de colección nativo de MongoDB
+  const collection = mongoose.connection.db.collection(collectionName);
+  
+  // Ahora sí, pasamos la colección correcta a la librería
+  const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(collection);
+  // -------------------------------
   // --------------------------
 
   const { version } = await fetchLatestBaileysVersion();
