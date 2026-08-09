@@ -1,6 +1,5 @@
 FROM node:18-slim
 
-# Instalar FFmpeg y dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     python3 \
