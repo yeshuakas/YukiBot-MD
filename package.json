@@ -1,6 +1,3 @@
-"scripts": {
-  "start": "node index.js"
-}
 {
   "name": "yukiwabot",
   "version": "3.2",
