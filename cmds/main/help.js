@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { getDevice, prepareWAMessageMedia } from 'baileys';
+import { getDevice, prepareWAMessageMedia } from '@whiskeysockets/baileys';
 import fs from 'fs';
 import axios from 'axios';
 import moment from 'moment-timezone';
