@@ -175,24 +175,18 @@ export async function startBot() {
   // --- CONEXIÓN A MONGODB ---
   const mongoUrl = process.env.MONGO_URI;
   if (!mongoUrl) {
-      log.error("Falta la variable MONGO_URI en Render. El bot no puede iniciar.");
+      log.error("Falta la variable MONGO_URI en Render.");
       process.exit(1);
   }
   
   if (mongoose.connection.readyState === 0) {
       await mongoose.connect(mongoUrl);
-      console.log(chalk.green('[ ✿ ]  Conectado a MongoDB Atlas exitosamente.'));
   }
 
-  // --- CORRECCIÓN PARA MONGODB ---
-  const dbName = "whatsapp_bot"; 
   const collectionName = "session_owner";
-  
   const collection = mongoose.connection.db.collection(collectionName);
   const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(collection);
-  // -------------------------------
 
-  // 1. PRIMERO CREAMOS EL SOCKET 'sock'
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
@@ -220,29 +214,9 @@ export async function startBot() {
     return jid;
   };
 
-  // 2. LUEGO CONFIGURAMOS LA SOLICITUD DE CÓDIGO DE EMPAREJAMIENTO DE FORMA SEGURA
-  if (opcion === "2" && !state.creds.registered) {
-    sock.ev.on("connection.update", async (update) => {
-      const { connection } = update;
-      if (connection === 'open' && !state.creds.registered) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          if (!sock.authState.creds.registered) {
-            const pairing = await sock.requestPairingCode(phoneNumber);
-            const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
-            console.log(chalk.bold.white(chalk.bgMagenta(`Código de emparejamiento:`)), chalk.bold.white(chalk.white(codeBot)));
-          }
-        } catch (err) {
-          console.log(chalk.red("Error al generar código:"), err);
-        }
-      }
-    });
-  }
-
-  // 3. EVENTO DE MENSAJES
+  // --- EVENTOS DE MENSAJES ---
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
-    if (!botReady) return;
-    if (type !== 'notify') return;
+    if (!botReady || type !== 'notify') return;
     for (const msg of messages) {
       if (msg?.message && msg?.key?.id) {
         const sid = msg.key.remoteJid + ':' + msg.key.id;
@@ -251,57 +225,50 @@ export async function startBot() {
       }
       try {
         if (!msg?.message || msg.key?.remoteJid === "status@broadcast") continue;
-        if ((msg.messageTimestamp * 1000) < bootTime - 15_000) continue;
-        if (msg.message.ephemeralMessage) msg.message = msg.message.ephemeralMessage.message;
         const m = await smsg(sock, msg);
-        if (typeof main === 'function') main(sock, m, messages).catch((err) => console.error('[ ✿  ]  Main Owner »', err?.message));
-      } catch (err) {
-        console.error('Error:', err);
-      }
+        if (typeof main === 'function') main(sock, m, messages).catch((err) => console.error(err));
+      } catch (err) { console.error('Error:', err); }
     }
   });
 
-  try { await events(sock, null); } catch (err) { console.log(chalk.gray(`[ EVENT ERROR ] → ${err}`)); }
-
-  // 4. GESTIÓN GENERAL DE ESTADOS DE CONEXIÓN
+  // --- GESTIÓN DE CONEXIÓN Y EMPAREJAMIENTO (Único bloque integrado) ---
   sock.ev.on("connection.update", async (update) => {
-    const { qr, connection, lastDisconnect, isNewLogin, receivedPendingNotifications } = update;
+    const { qr, connection, lastDisconnect, receivedPendingNotifications } = update;
     
-    if (qr != 0 && qr != undefined || methodCodeQR) {
-      if (opcion == '1' || methodCodeQR) {
-        console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
-        qrcode.generate(qr, { small: true });
-      }
+    if (qr && (opcion == '1' || methodCodeQR)) {
+      console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
+      qrcode.generate(qr, { small: true });
     }
-    
-    if (connection === "open") {
-      bootTime = Date.now();
-      reconexion = 0;
-      isRestarting = false;
-      const userName = sock.user.name || "Desconocido";
-      log.success(`[ ✿ ]  Conectado a: ${userName}`);
-      if (!botReady) {
-        botReady = true;
-        warmupGroups(sock);
-      }
+
+    if (connection === 'open') {
+        bootTime = Date.now();
+        reconexion = 0;
+        isRestarting = false;
+        log.success(`Conectado a: ${sock.user?.name || "Bot"}`);
+        if (!botReady) { botReady = true; warmupGroups(sock); }
     }
-    
-    if (isNewLogin) log.info("Nuevo dispositivo detectado");
-    
+
+    if (connection === 'open' && !state.creds.registered) {
+        try {
+            await new Promise(r => setTimeout(r, 1000));
+            if (!sock.authState.creds.registered) {
+                const pairing = await sock.requestPairingCode(phoneNumber);
+                const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
+                console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
+            }
+        } catch (e) { log.error("Error al generar código: " + e); }
+    }
+
     if (receivedPendingNotifications === true) {
       log.warn("Por favor espere aproximadamente 1 minuto...");
       sock.ev.flush();
     }
-  });
-}
-    
+
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
         log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
-        botReady = false;
-        isRestarting = false;
-        await clearSession(); // Modificado para esperar a que MongoDB se limpie
+        await clearSession();
         process.exit(1);
       }
       if (reason === DisconnectReason.connectionReplaced) {
@@ -311,29 +278,28 @@ export async function startBot() {
       }
       reconexion++;
       if (reconexion > retriesLimit) {
-        log.error(`Demasiados reintentos (${retriesLimit}) — sesión posiblemente corrupta, limpiando...`);
-        botReady = false;
-        reconexion = 0;
-        isRestarting = false;
+        log.error(`Demasiados reintentos (${retriesLimit}) — limpiando...`);
         await clearSession();
         process.exit(1);
       }
       const delay = Math.min(3000 * reconexion, 30000);
       const reasonMessages = {
-        [DisconnectReason.connectionLost]: "Se perdió la conexión al servidor, intentando reconectar...",
+        [DisconnectReason.connectionLost]: "Se perdió la conexión, intentando reconectar...",
         [DisconnectReason.connectionClosed]: "Conexión cerrada, intentando reconectarse...",
         [DisconnectReason.restartRequired]: "Es necesario reiniciar...",
-        [DisconnectReason.timedOut]: "Tiempo de conexión agotado, intentando reconectarse...",
-        [DisconnectReason.badSession]: "Sesión inválida, limpiando y reconectando...",
+        [DisconnectReason.timedOut]: "Tiempo de conexión agotado...",
+        [DisconnectReason.badSession]: "Sesión inválida, limpiando...",
       };
       log.warn(reasonMessages[reason] || `Desconexión (${reason}), reconectando en ${delay / 1000}s...`);
       isRestarting = false;
       setTimeout(startBot, delay);
     }
   });
+  
+  try { await events(sock, null); } catch (err) { console.log(err); }
 }
 
-// === BLOQUE DE ARRANQUE CORREGIDO (Estaba duplicado) ===
+// === BLOQUE DE ARRANQUE ===
 setInterval(cleanCache, 60 * 60 * 1000);
 cleanCache();
 
@@ -343,7 +309,6 @@ cleanCache();
   loadBots();
   await startBot();
 })();
-// =======================================================
 
 // Servidor web para mantener contento a Render y evitar el Timed Out
 const app = express();
