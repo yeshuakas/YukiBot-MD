@@ -198,29 +198,29 @@ export async function startBot() {
   // -------------------------------
   // --------------------------
 
-  const { version } = await fetchLatestBaileysVersion();
-  let saveCredsTimer = null;
-  const saveCreds = () => { clearTimeout(saveCredsTimer); saveCredsTimer = setTimeout(saveCredsDB, 2000); };
-  
-  console.info = () => {};
-  console.debug = () => {};
-  
-  const sock = makeWASocket({
-    version,
-    logger: pino({ level: 'silent' }),
-    browser: Browsers.macOS('Chrome'),
-    printQRInTerminal: false,
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
-    markOnlineOnConnect: false,
-    syncFullHistory: false,
-    generateHighQualityLinkPreview: true,
-    shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
-    keepAliveIntervalMs: 25_000,
-    getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
-  });
-
+  if (opcion === "2" && !state.creds.registered) {
+    // Escuchamos cuando la conexión cambie de estado
+    sock.ev.on("connection.update", async (update) => {
+      const { connection } = update;
+      
+      // Solo pedimos el código cuando el socket esté oficialmente abierto/conectado
+      if (connection === 'open' && !state.creds.registered) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (!sock.authState.creds.registered) {
+            const pairing = await sock.requestPairingCode(phoneNumber);
+            const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
+            console.log(chalk.bold.white(chalk.bgMagenta(`Código de emparejamiento:`)), chalk.bold.white(chalk.white(codeBot)));
+          }
+        } catch (err) {
+          console.log(chalk.red("Error al generar código:"), err);
+        }
+      }
+    });
+  }
   global.sock = sock;
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", saveCredsDB); // Asegúrate de usar saveCredsDB si es el que devolvió useMongoDBAuthState
   
   sock.sendText = (jid, text, quoted = "", options) => sock.sendMessage(jid, { text, ...options }, { quoted });
   sock.decodeJid = (jid) => {
