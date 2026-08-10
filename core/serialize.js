@@ -1,3 +1,4 @@
+// ✅ Cámbiarlo a esto:
 import {
   proto,
   delay,
@@ -11,7 +12,7 @@ import {
   getDevice,
   extractMessageContent,
   jidDecode
-} from 'baileys';
+} from '@whiskeysockets/baileys';
 import fs from 'fs';
 import axios from 'axios';
 import crypto from 'crypto';
