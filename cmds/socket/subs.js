@@ -1,4 +1,4 @@
-import makeWASocket, { Browsers, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, DisconnectReason, jidDecode, useMultiFileAuthState } from 'baileys';
+import makeWASocket, { Browsers, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, DisconnectReason, jidDecode, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import NodeCache from 'node-cache';
 import main from '#main';
 import events from '#events';
