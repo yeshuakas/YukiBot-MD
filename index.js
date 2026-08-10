@@ -126,7 +126,7 @@ let botReady = false;
 let isRestarting = false;
 const retriesLimit = 15;
 
-async function warmupGroups(sock) {
+async function warmupGroups(sockInstance) {
   try {
     const allChats = db.getChat()
     const chatIds = allChats.map(c => c.id).filter(id => typeof id === 'string' && id.endsWith('@g.us')).slice(0, 50)
@@ -137,7 +137,7 @@ async function warmupGroups(sock) {
     }
     await Promise.allSettled(batches.map(batch => Promise.allSettled(batch.map(async id => {
     try {
-    const meta = await sock.groupMetadata(id)
+    const meta = await sockInstance.groupMetadata(id)
     if (meta) setCachedMeta(id, meta) } catch {}}))))
   } catch (e) {}
 }
@@ -286,5 +286,5 @@ cleanCache();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get('/', (req, res) => { res.send('¡YukiBot-MD está activo y conectado a MongoDB!'); });
+app.get('/', (req, res) => { res.send('¡YukiBot-MD está activo, funcionando 24/7 y conectado a MongoDB!'); });
 app.listen(PORT, () => { console.log(`Servidor web interno escuchando en el puerto ${PORT}`); });
