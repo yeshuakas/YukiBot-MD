@@ -1,18 +1,17 @@
 import "./settings.js";
 import main from '#main';
 import events from '#events';
-import pkg from '@whiskeysockets/baileys';
+import * as Bail from '@whiskeysockets/baileys';
 
-// Extraemos de forma segura tanto la función principal como las utilidades
-const lib = pkg.default || pkg;
-const makeWASocket = typeof lib === 'function' ? lib : (lib.default || lib.makeWASocket);
-const { 
-  Browsers, 
-  makeCacheableSignalKeyStore, 
-  fetchLatestBaileysVersion, 
-  jidDecode, 
-  DisconnectReason 
-} = lib;
+// Extraemos de forma segura cada función comprobando todas las rutas posibles de Baileys
+const b = Bail.default || Bail;
+
+const makeWASocket = typeof b === 'function' ? b : (b.default || Bail.makeWASocket);
+const fetchLatestBaileysVersion = b.fetchLatestBaileysVersion || Bail.fetchLatestBaileysVersion;
+const Browsers = b.Browsers || Bail.Browsers;
+const makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore || Bail.makeCacheableSignalKeyStore;
+const jidDecode = b.jidDecode || Bail.jidDecode;
+const DisconnectReason = b.DisconnectReason || Bail.DisconnectReason;
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
