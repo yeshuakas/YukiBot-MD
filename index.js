@@ -206,9 +206,11 @@ export async function startBot() {
     }
   });
 
-  // Solicitud de código de emparejamiento segura (fuera de connection.update y con ejecución única)
+  // Solicitud de código de emparejamiento segura
   let pairingRequested = false;
+  
   if (!state.creds.registered && opcion === "2") {
+    // Esperamos 6 segundos antes de pedir el código
     setTimeout(async () => {
       if (pairingRequested) return;
       try {
@@ -222,7 +224,7 @@ export async function startBot() {
         pairingRequested = false;
         console.log(chalk.red("Error al generar código:"), err);
       }
-    }, 5000); // Espera 5 segundos a que el socket abra la conexión de red limpiamente
+    }, 6000); 
   }
 
   sock.ev.on("connection.update", async (update) => {
