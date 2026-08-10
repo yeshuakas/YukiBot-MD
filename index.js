@@ -3,33 +3,28 @@ import main from '#main';
 import events from '#events';
 import * as Bail from '@whiskeysockets/baileys';
 
-// Extraemos de forma segura cada función comprobando todas las rutas posibles de Baileys
 const b = Bail.default || Bail;
-
 const makeWASocket = typeof b === 'function' ? b : (b.default || Bail.makeWASocket);
 const fetchLatestBaileysVersion = b.fetchLatestBaileysVersion || Bail.fetchLatestBaileysVersion;
 const Browsers = b.Browsers || Bail.Browsers;
 const makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore || Bail.makeCacheableSignalKeyStore;
 const jidDecode = b.jidDecode || Bail.jidDecode;
 const DisconnectReason = b.DisconnectReason || Bail.DisconnectReason;
+
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
 import cfonts from "cfonts";
 import fs from "fs";
 import path from "path";
-import readlineSync from "readline-sync";
 import { smsg, getCachedMeta, setCachedMeta } from "#serialize";
 import cmdsLoader from '#system/cmdsLoader';
 import "#system/database";
 import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
 import express from 'express';
-
-// --- NUEVAS IMPORTACIONES PARA MONGODB ---
 import mongoose from 'mongoose';
 import { useMongoDBAuthState } from 'mongo-baileys'; 
-// -----------------------------------------
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
@@ -40,7 +35,6 @@ const log = {
 
 let phoneNumber = "";
 const methodCodeQR = process.argv.includes("--qr");
-const methodCode = process.argv.includes("code");
 
 function normalizePhone(input) {
   let s = String(input).replace(/\D/g, '');
@@ -54,15 +48,8 @@ function normalizePhone(input) {
 
 const { say } = cfonts;
 console.log(chalk.magentaBright('\n❀ Iniciando...'));
-say('Yuki Suou', {
-  align: 'center',           
-  gradient: ['red', 'blue'] 
-});
-say('Made with love by Destroy', {
-  font: 'console',
-  align: 'center',
-  gradient: ['blue', 'magenta']
-});
+say('Yuki Suou', { align: 'center', gradient: ['red', 'blue'] });
+say('Made with love by Destroy', { font: 'console', align: 'center', gradient: ['blue', 'magenta'] });
 
 const botTypes = [
   { name: 'SubBot', folder: './Sessions/Subs', starter: startSubBot },
@@ -87,7 +74,6 @@ async function loadBots() {
         reconnecting.add(userId);
         await starter(null, null, '', false, userId, '');
       } catch (e) {
-        console.log(chalk.gray(`[ loadBots ] Error iniciando ${name} ${userId}: ${e?.message || e}`));
         reconnecting.delete(userId);
       }
       await new Promise((res) => setTimeout(res, 2500));
@@ -100,28 +86,23 @@ async function initDB() {
   db.initDB();
   db.clearDB();
   global.db = db;
-  console.log(chalk.gray('[ ✿  ]  Base de datos (Local) cargada correctamente.'));
+  console.log(chalk.gray('[ ✿ ] Base de datos (Local) cargada correctamente.'));
 }
 
 function cleanCache() {
   try {
     if (fs.existsSync('./tmp')) {
       const files = fs.readdirSync('./tmp');
-      let cleaned = 0;
       for (const file of files) {
-        try { fs.unlinkSync(path.join('./tmp', file)); cleaned++; } catch {}
+        try { fs.unlinkSync(path.join('./tmp', file)); } catch {}
       }
-      if (cleaned > 0) console.log(chalk.gray(`[ ⚠ ] Cache tmp: ${cleaned} archivos eliminados`));
     }
-  } catch (e) {
-    console.error(chalk.red('Error en cleanCache: '), e);
-  }
+  } catch (e) {}
 }
 
 async function clearSession() {
   try {
     if (mongoose.connection.readyState === 1) {
-      // Borra las colecciones comunes de sesión de Baileys en Mongo
       const collections = await mongoose.connection.db.collections();
       for (let collection of collections) {
         if (collection.collectionName.includes('session') || collection.collectionName.includes('auth')) {
@@ -135,7 +116,6 @@ async function clearSession() {
   }
 }
 
-// Configurado automáticamente para la nube (Render) usando Opción 2
 let opcion = "2";
 phoneNumber = normalizePhone("524428178176");
 console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +524428178176\n`));
@@ -151,8 +131,6 @@ async function warmupGroups(sock) {
     const allChats = db.getChat()
     const chatIds = allChats.map(c => c.id).filter(id => typeof id === 'string' && id.endsWith('@g.us')).slice(0, 50)
     if (!chatIds.length) return
-    console.log(chalk.gray(`[ ✿ ] Precargando metadata de ${chatIds.length} grupos...`))
-    const t = Date.now()
     const batches = []
     for (let i = 0; i < chatIds.length; i += 10) {
       batches.push(chatIds.slice(i, i + 10))
@@ -161,10 +139,7 @@ async function warmupGroups(sock) {
     try {
     const meta = await sock.groupMetadata(id)
     if (meta) setCachedMeta(id, meta) } catch {}}))))
-    console.log(chalk.gray(`[ ✿ ] Warmup completado en ${Date.now() - t}ms`))
-  } catch (e) {
-    console.log(chalk.gray(`[ ✿ ] warmupGroups → ${e?.message || e}`))
-  }
+  } catch (e) {}
 }
 
 export async function startBot() {
@@ -172,7 +147,6 @@ export async function startBot() {
   isRestarting = true;
   bootTime = Date.now();
 
-  // --- CONEXIÓN A MONGODB ---
   const mongoUrl = process.env.MONGO_URI;
   if (!mongoUrl) {
       log.error("Falta la variable MONGO_URI en Render.");
@@ -181,10 +155,10 @@ export async function startBot() {
   
   if (mongoose.connection.readyState === 0) {
       await mongoose.connect(mongoUrl);
+      console.log(chalk.green('[ ✿ ] Conectado a MongoDB Atlas exitosamente.'));
   }
 
-  const collectionName = "session_owner";
-  const collection = mongoose.connection.db.collection(collectionName);
+  const collection = mongoose.connection.db.collection("session_owner");
   const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(collection);
 
   const sock = makeWASocket({
@@ -214,7 +188,6 @@ export async function startBot() {
     return jid;
   };
 
-  // --- EVENTOS DE MENSAJES ---
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (!botReady || type !== 'notify') return;
     for (const msg of messages) {
@@ -231,7 +204,6 @@ export async function startBot() {
     }
   });
 
-  // --- GESTIÓN DE CONEXIÓN Y EMPAREJAMIENTO (Único bloque integrado) ---
   sock.ev.on("connection.update", async (update) => {
     const { qr, connection, lastDisconnect, receivedPendingNotifications } = update;
     
@@ -239,35 +211,42 @@ export async function startBot() {
       console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
       qrcode.generate(qr, { small: true });
     }
-
-    if (connection === 'open') {
-        bootTime = Date.now();
-        reconexion = 0;
-        isRestarting = false;
-        log.success(`Conectado a: ${sock.user?.name || "Bot"}`);
-        if (!botReady) { botReady = true; warmupGroups(sock); }
+    
+    if (connection === "open") {
+      bootTime = Date.now();
+      reconexion = 0;
+      isRestarting = false;
+      log.success(`[ ✿ ] Conectado a: ${sock.user?.name || "Desconocido"}`);
+      if (!botReady) {
+        botReady = true;
+        warmupGroups(sock);
+      }
     }
 
-    if (connection === 'open' && !state.creds.registered) {
-        try {
-            await new Promise(r => setTimeout(r, 1000));
-            if (!sock.authState.creds.registered) {
-                const pairing = await sock.requestPairingCode(phoneNumber);
-                const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
-                console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
-            }
-        } catch (e) { log.error("Error al generar código: " + e); }
+    if (connection === 'open' && !state.creds.registered && opcion === "2") {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!sock.authState.creds.registered) {
+          const pairing = await sock.requestPairingCode(phoneNumber);
+          const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
+          console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
+        }
+      } catch (err) {
+        console.log(chalk.red("Error al generar código:"), err);
+      }
     }
-
+    
     if (receivedPendingNotifications === true) {
       log.warn("Por favor espere aproximadamente 1 minuto...");
       sock.ev.flush();
     }
-
+    
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
         log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
+        botReady = false;
+        isRestarting = false;
         await clearSession();
         process.exit(1);
       }
@@ -278,28 +257,23 @@ export async function startBot() {
       }
       reconexion++;
       if (reconexion > retriesLimit) {
-        log.error(`Demasiados reintentos (${retriesLimit}) — limpiando...`);
+        log.error(`Demasiados reintentos (${retriesLimit}) — sesión posiblemente corrupta, limpiando...`);
+        botReady = false;
+        reconexion = 0;
+        isRestarting = false;
         await clearSession();
         process.exit(1);
       }
       const delay = Math.min(3000 * reconexion, 30000);
-      const reasonMessages = {
-        [DisconnectReason.connectionLost]: "Se perdió la conexión, intentando reconectar...",
-        [DisconnectReason.connectionClosed]: "Conexión cerrada, intentando reconectarse...",
-        [DisconnectReason.restartRequired]: "Es necesario reiniciar...",
-        [DisconnectReason.timedOut]: "Tiempo de conexión agotado...",
-        [DisconnectReason.badSession]: "Sesión inválida, limpiando...",
-      };
-      log.warn(reasonMessages[reason] || `Desconexión (${reason}), reconectando en ${delay / 1000}s...`);
+      log.warn(`Desconexión (${reason}), reconectando en ${delay / 1000}s...`);
       isRestarting = false;
       setTimeout(startBot, delay);
     }
   });
-  
-  try { await events(sock, null); } catch (err) { console.log(err); }
+
+  try { await events(sock, null); } catch (err) {}
 }
 
-// === BLOQUE DE ARRANQUE ===
 setInterval(cleanCache, 60 * 60 * 1000);
 cleanCache();
 
@@ -310,14 +284,7 @@ cleanCache();
   await startBot();
 })();
 
-// Servidor web para mantener contento a Render y evitar el Timed Out
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-  res.send('¡YukiBot-MD está activo, funcionando 24/7 y conectado a MongoDB!');
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor web interno escuchando en el puerto ${PORT}`);
-});
+app.get('/', (req, res) => { res.send('¡YukiBot-MD está activo y conectado a MongoDB!'); });
+app.listen(PORT, () => { console.log(`Servidor web interno escuchando en el puerto ${PORT}`); });
