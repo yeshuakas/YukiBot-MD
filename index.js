@@ -166,14 +166,14 @@ export async function startBot() {
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.macOS('Chrome'),
+    browser: Browsers.ubuntu('Chrome'), // Fundamental: Cambiar de macOS a ubuntu/Chrome para mayor estabilidad en Render
     printQRInTerminal: false,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
     markOnlineOnConnect: false,
-    syncFullHistory: false,
+    syncFullHistory: false,       // Evita que WhatsApp rechace por sobrecarga al iniciar
     generateHighQualityLinkPreview: true,
     shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
-    keepAliveIntervalMs: 25_000,
+    keepAliveIntervalMs: 30_000,  // Aumentado a 30s para evitar desconexiones tempranas
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
 
