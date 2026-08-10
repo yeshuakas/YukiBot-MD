@@ -1,7 +1,7 @@
 import { startSubBot } from './subs.js';
 import fs from 'fs';
 import path from 'path';
-import { jidDecode } from 'baileys';
+import { jidDecode } from '@whiskeysockets/baileys';
 import db from '#db';
 
 export default {
