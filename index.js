@@ -137,8 +137,8 @@ async function clearSession() {
 
 // Configurado automáticamente para la nube (Render) usando Opción 2
 let opcion = "2";
-phoneNumber = normalizePhone("527461012017");
-console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +527461012017\n`));
+phoneNumber = normalizePhone("524428178176");
+console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +524428178176\n`));
 
 let bootTime = Date.now();
 let reconexion = 0;
