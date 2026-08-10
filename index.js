@@ -86,7 +86,6 @@ async function loadBots() {
 
 async function initDB() {
   db.initDB();
-  db.clearDB();
   global.db = db;
   console.log(chalk.gray('[ ✿ ] Base de datos (Local) cargada correctamente.'));
 }
