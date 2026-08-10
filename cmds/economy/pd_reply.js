@@ -20,9 +20,10 @@ export async function before({ msg, sock }) {
     const premio = 2000 + bonus
 
     // Obtener la moneda configurada en el bot
+// Obtener la moneda configurada en el bot de forma segura
     const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
     const bot = db.getSettings(botId)
-    const currency = bot.currency || 'Yenes'
+    const currency = bot?.currency || 'Yenes'
 
     // Sumar el premio a la economía del usuario
     const user = db.getUser(msg.sender)
