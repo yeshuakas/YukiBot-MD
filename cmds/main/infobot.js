@@ -1,6 +1,6 @@
 import fetch from 'node-fetch'
 import os from 'os';
-import { prepareWAMessageMedia } from 'baileys';
+import { prepareWAMessageMedia } from '@whiskeysockets/baileys';
 import db from '#db';
 
 export default {
