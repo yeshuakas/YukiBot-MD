@@ -226,9 +226,9 @@ export async function startBot() {
       }
     }
 
-    if (connection === 'open' && !state.creds.registered && opcion === "2") {
+    if (!state.creds.registered && opcion === "2") {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         if (!sock.authState.creds.registered) {
           const pairing = await sock.requestPairingCode(phoneNumber);
           const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
