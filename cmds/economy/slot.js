@@ -1,4 +1,4 @@
-import { delay } from 'baileys';
+import { delay } from '@whiskeysockets/baileys';
 import db from '#db';
 
 export default {
