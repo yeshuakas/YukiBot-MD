@@ -118,7 +118,8 @@ async function clearSession() {
   }
 }
 
-let opcion = "1";
+let opcion = "2";
+phoneNumber = normalizePhone("524428178176");
 console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +524428178176\n`));
 
 let bootTime = Date.now();
