@@ -11,6 +11,9 @@ const makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore || Bail.makeCa
 const jidDecode = b.jidDecode || Bail.jidDecode;
 const DisconnectReason = b.DisconnectReason || Bail.DisconnectReason;
 
+// Ahora sí, llamamos a la función después de declararla
+const { version } = await fetchLatestBaileysVersion();
+
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
@@ -24,7 +27,7 @@ import { startSubBot } from './cmds/socket/subs.js';
 import db from '#db';
 import express from 'express';
 import mongoose from 'mongoose';
-import { useMongoDBAuthState } from 'mongo-baileys'; 
+import { useMongoDBAuthState } from 'mongo-baileys';
 
 const log = {
   info: (msg) => console.log(chalk.bgBlue.white.bold(`INFO`), chalk.white(msg)),
