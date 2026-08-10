@@ -2,10 +2,6 @@ import "./settings.js";
 import main from '#main';
 import events from '#events';
 import pkg from '@whiskeysockets/baileys';
-
-// Extrae makeWASocket de esta forma segura:
-const makeWASocket = pkg.default?.makeWASocket || pkg.makeWASocket || pkg.default;
-
 const { 
   Browsers, 
   makeCacheableSignalKeyStore, 
@@ -13,6 +9,8 @@ const {
   jidDecode, 
   DisconnectReason 
 } = pkg.default || pkg;
+
+const makeWASocket = pkg.default?.makeWASocket || pkg.makeWASocket || pkg.default;
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
