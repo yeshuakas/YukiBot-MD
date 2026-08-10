@@ -1,5 +1,6 @@
 // ✅ Cámbiarlo a esto:
-import {
+import pkg from '@whiskeysockets/baileys';
+const {
   proto,
   delay,
   areJidsSameUser,
@@ -12,7 +13,7 @@ import {
   getDevice,
   extractMessageContent,
   jidDecode
-} from '@whiskeysockets/baileys';
+} = pkg;
 import fs from 'fs';
 import axios from 'axios';
 import crypto from 'crypto';
