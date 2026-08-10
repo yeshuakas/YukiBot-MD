@@ -11,7 +11,6 @@ const makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore || Bail.makeCa
 const jidDecode = b.jidDecode || Bail.jidDecode;
 const DisconnectReason = b.DisconnectReason || Bail.DisconnectReason;
 
-// Ahora sí, llamamos a la función después de declararla
 const { version } = await fetchLatestBaileysVersion();
 
 import pino from "pino";
@@ -207,6 +206,25 @@ export async function startBot() {
     }
   });
 
+  // Solicitud de código de emparejamiento segura (fuera de connection.update y con ejecución única)
+  let pairingRequested = false;
+  if (!state.creds.registered && opcion === "2") {
+    setTimeout(async () => {
+      if (pairingRequested) return;
+      try {
+        if (!sock.authState.creds.registered) {
+          pairingRequested = true;
+          const pairing = await sock.requestPairingCode(phoneNumber);
+          const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
+          console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
+        }
+      } catch (err) {
+        pairingRequested = false;
+        console.log(chalk.red("Error al generar código:"), err);
+      }
+    }, 5000); // Espera 5 segundos a que el socket abra la conexión de red limpiamente
+  }
+
   sock.ev.on("connection.update", async (update) => {
     const { qr, connection, lastDisconnect, receivedPendingNotifications } = update;
     
@@ -223,19 +241,6 @@ export async function startBot() {
       if (!botReady) {
         botReady = true;
         warmupGroups(sock);
-      }
-    }
-
-    if (!state.creds.registered && opcion === "2") {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        if (!sock.authState.creds.registered) {
-          const pairing = await sock.requestPairingCode(phoneNumber);
-          const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
-          console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
-        }
-      } catch (err) {
-        console.log(chalk.red("Error al generar código:"), err);
       }
     }
     
