@@ -118,12 +118,17 @@ function cleanCache() {
   }
 }
 
-// --- MODIFICADO: Ahora limpia la sesión desde MongoDB ---
 async function clearSession() {
   try {
     if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.collection('session_owner').drop();
-      log.warn('Sesión del principal eliminada de MongoDB — reiniciando para vincular de nuevo...');
+      // Borra las colecciones comunes de sesión de Baileys en Mongo
+      const collections = await mongoose.connection.db.collections();
+      for (let collection of collections) {
+        if (collection.collectionName.includes('session') || collection.collectionName.includes('auth')) {
+          await collection.drop();
+        }
+      }
+      log.warn('Sesiones anteriores eliminadas por completo de MongoDB.');
     }
   } catch (e) {
     log.error(`clearSession → ${e?.message || e}`);
