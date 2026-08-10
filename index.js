@@ -1,7 +1,7 @@
 import "./settings.js";
 import main from '#main';
 import events from '#events';
-import makeWASocket, { Browsers, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, jidDecode, DisconnectReason } from 'baileys';
+import makeWASocket, { Browsers, makeCacheableSignalKeyStore, fetchLatestBaileysVersion, jidDecode, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
