@@ -1,4 +1,4 @@
-import { delay } from 'baileys';
+import { delay } from '@whiskeysockets/baileys';
 import db from '#db';
 
 let buatall = 1;
