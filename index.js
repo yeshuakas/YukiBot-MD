@@ -2,15 +2,17 @@ import "./settings.js";
 import main from '#main';
 import events from '#events';
 import pkg from '@whiskeysockets/baileys';
+
+// Extraemos de forma segura tanto la función principal como las utilidades
+const lib = pkg.default || pkg;
+const makeWASocket = typeof lib === 'function' ? lib : (lib.default || lib.makeWASocket);
 const { 
   Browsers, 
   makeCacheableSignalKeyStore, 
   fetchLatestBaileysVersion, 
   jidDecode, 
   DisconnectReason 
-} = pkg.default || pkg;
-
-const makeWASocket = pkg.default?.makeWASocket || pkg.makeWASocket || pkg.default;
+} = lib;
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 import chalk from "chalk";
