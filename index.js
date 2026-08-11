@@ -160,7 +160,7 @@ export async function startBot() {
       // Pequeña pausa de seguridad para estabilizar la conexión antes de leer la sesión
       await new Promise(resolve => setTimeout(resolve, 2000));
   }
-
+  const dbInstance = mongoose.connection.db;
   const collection = mongoose.connection.db.collection("session_owner");
   const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(collection);
 
