@@ -157,6 +157,8 @@ export async function startBot() {
   if (mongoose.connection.readyState === 0) {
       await mongoose.connect(mongoUrl);
       console.log(chalk.green('[ ✿ ] Conectado a MongoDB Atlas exitosamente.'));
+      // Pequeña pausa de seguridad para estabilizar la conexión antes de leer la sesión
+      await new Promise(resolve => setTimeout(resolve, 2000));
   }
 
   const collection = mongoose.connection.db.collection("session_owner");
