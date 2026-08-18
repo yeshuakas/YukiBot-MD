@@ -35,9 +35,6 @@ const log = {
   error: (msg) => console.log(chalk.bgRed.white.bold(`ERROR`), chalk.redBright(msg))
 };
 
-let phoneNumber = "";
-const methodCodeQR = process.argv.includes("--qr");
-
 function normalizePhone(input) {
   let s = String(input).replace(/\D/g, '');
   if (!s) return '';
@@ -101,25 +98,15 @@ function cleanCache() {
   } catch (e) {}
 }
 
-async function clearSession() {
-  try {
-    if (mongoose.connection.readyState === 1) {
-      const collections = await mongoose.connection.db.collections();
-      for (let collection of collections) {
-        if (collection.collectionName.includes('session') || collection.collectionName.includes('auth')) {
-          await collection.drop();
-        }
-      }
-      log.warn('Sesiones anteriores eliminadas por completo de MongoDB.');
-    }
-  } catch (e) {
-    log.error(`clearSession → ${e?.message || e}`);
-  }
-}
+// Configuración dinámica del número para Render
+const envPhone = process.env.BOT_NUMERO || "";
+let phoneNumber = envPhone ? normalizePhone(envPhone) : "";
 
-let opcion = "2";
-phoneNumber = normalizePhone("527461012017");
-console.log(chalk.bold.cyanBright(`\n[NUBE] Seleccionada opción 2 automáticamente con el número: +527461012017\n`));
+if (phoneNumber) {
+  console.log(chalk.bold.cyanBright(`\n[NUBE] Número configurado desde Render: +${phoneNumber}\n`));
+} else {
+  console.log(chalk.bold.yellowBright(`\n[NUBE] No se configuró la variable BOT_NUMERO en Render. El bot iniciará con la sesión existente.\n`));
+}
 
 let bootTime = Date.now();
 let reconexion = 0;
@@ -157,24 +144,22 @@ export async function startBot() {
   if (mongoose.connection.readyState === 0) {
       await mongoose.connect(mongoUrl);
       console.log(chalk.green('[ ✿ ] Conectado a MongoDB Atlas exitosamente.'));
-      // Pequeña pausa de seguridad para estabilizar la conexión antes de leer la sesión
       await new Promise(resolve => setTimeout(resolve, 2000));
   }
-  const dbInstance = mongoose.connection.db;
   const collection = mongoose.connection.db.collection("session_owner");
   const { state, saveCreds: saveCredsDB } = await useMongoDBAuthState(collection);
 
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.ubuntu('Chrome'), // Fundamental: Cambiar de macOS a ubuntu/Chrome para mayor estabilidad en Render
+    browser: Browsers.ubuntu('Chrome'), 
     printQRInTerminal: false,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
     markOnlineOnConnect: false,
-    syncFullHistory: false,       // Evita que WhatsApp rechace por sobrecarga al iniciar
+    syncFullHistory: false,       
     generateHighQualityLinkPreview: true,
     shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
-    keepAliveIntervalMs: 30_000,  // Aumentado a 30s para evitar desconexiones tempranas
+    keepAliveIntervalMs: 30_000,  
     getMessage: async (key) => msgStore.get(key.remoteJid + ':' + key.id),
   });
 
@@ -207,11 +192,10 @@ export async function startBot() {
     }
   });
 
-  // Solicitud de código de emparejamiento segura
+  // Solicitud de código de emparejamiento segura para Render
   let pairingRequested = false;
   
-  if (!state.creds.registered && opcion === "2") {
-    // Esperamos 6 segundos antes de pedir el código
+  if (!state.creds.registered && phoneNumber) {
     setTimeout(async () => {
       if (pairingRequested) return;
       try {
@@ -220,6 +204,7 @@ export async function startBot() {
           const pairing = await sock.requestPairingCode(phoneNumber);
           const codeBot = pairing?.match(/.{1,4}/g)?.join("-") || pairing;
           console.log(chalk.bold.white(chalk.bgMagenta(` Código de emparejamiento: `)), chalk.bold.white(codeBot));
+          console.log(chalk.bold.cyan(`Ingresa este código en las notificaciones de WhatsApp de tu celular.`));
         }
       } catch (err) {
         pairingRequested = false;
@@ -229,12 +214,7 @@ export async function startBot() {
   }
 
   sock.ev.on("connection.update", async (update) => {
-    const { qr, connection, lastDisconnect, receivedPendingNotifications } = update;
-    
-    if (qr && (opcion == '1' || methodCodeQR)) {
-      console.log(chalk.green.bold("[ ✿ ] Escanea este código QR"));
-      qrcode.generate(qr, { small: true });
-    }
+    const { connection, lastDisconnect, receivedPendingNotifications } = update;
     
     if (connection === "open") {
       bootTime = Date.now();
@@ -255,11 +235,11 @@ export async function startBot() {
     if (connection === "close") {
       const reason = lastDisconnect?.error?.output?.statusCode || 0;
       if ([DisconnectReason.loggedOut, DisconnectReason.forbidden, DisconnectReason.multideviceMismatch].includes(reason)) {
-        log.warn(`Principal desvinculado (${reason}) — limpiando sesión y reiniciando...`);
+        log.error(`Sesión inválida o desvinculada desde el teléfono (Error: ${reason}).`);
+        log.warn(`Debes ir a MongoDB Atlas y borrar la colección 'session_owner' si deseas vincular otro número.`);
         botReady = false;
         isRestarting = false;
-        await clearSession();
-        process.exit(1);
+        process.exit(1); 
       }
       if (reason === DisconnectReason.connectionReplaced) {
         log.warn("Conexión reemplazada — cerrá la otra sesión antes de reconectar.");
@@ -268,15 +248,14 @@ export async function startBot() {
       }
       reconexion++;
       if (reconexion > retriesLimit) {
-        log.error(`Demasiados reintentos (${retriesLimit}) — sesión posiblemente corrupta, limpiando...`);
+        log.error(`Demasiados reintentos de conexión (${retriesLimit}). Forzando reinicio del servidor...`);
         botReady = false;
         reconexion = 0;
         isRestarting = false;
-        await clearSession();
-        process.exit(1);
+        process.exit(1); 
       }
       const delay = Math.min(3000 * reconexion, 30000);
-      log.warn(`Desconexión (${reason}), reconectando en ${delay / 1000}s...`);
+      log.warn(`Desconexión temporal (${reason}), reconectando en ${delay / 1000}s...`);
       isRestarting = false;
       setTimeout(startBot, delay);
     }
