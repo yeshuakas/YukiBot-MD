@@ -152,10 +152,10 @@ export async function startBot() {
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.ubuntu('Chrome'), 
+    browser: Browsers.macOS('Desktop'), 
     printQRInTerminal: false,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })) },
-    markOnlineOnConnect: false,
+    markOnlineOnConnect: true,
     syncFullHistory: false,       
     generateHighQualityLinkPreview: true,
     shouldIgnoreJid: (jid) => jid.endsWith('@broadcast'),
