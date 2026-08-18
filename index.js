@@ -40,7 +40,7 @@ function normalizePhone(input) {
   if (!s) return '';
   if (s.startsWith('0')) s = s.replace(/^0+/, '');
   if (s.length === 10 && s.startsWith('3')) s = '57' + s;
-  if (s.startsWith('52') && !s.startsWith('521') && s.length >= 12) s = '521' + s.slice(2);
+  //if (s.startsWith('52') && !s.startsWith('521') && s.length >= 12) s = '521' + s.slice(2);
   if (s.startsWith('54') && !s.startsWith('549') && s.length >= 11) s = '549' + s.slice(2);
   return s;
 }
